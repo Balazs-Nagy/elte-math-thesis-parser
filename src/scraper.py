@@ -67,15 +67,21 @@ class ElteMathThesisParser:
         df = pd.DataFrame(dfs, columns=['program', 'year', 'author', 'title', 'supervisor', 'url'])
         return df
 
-    def parse_all(self) -> pd.DataFrame:
+    def parse_all(self, programs: list = None) -> pd.DataFrame:
         """ Run the parse_one() method for all available programs based on the homepage of the mathematical faculty
         of ELTE. """
+        if not programs:
+            # if not specified use all available programs
+            programs = self.programs.keys()
         dfs = []
-        for program in self.programs.keys():
+        for program in programs:
             df = self.parse_one(program)
             dfs.append(df)
             print(f'Finished parsing for {program}.')
         data = pd.concat(dfs)
+        # clean unwanted characters
+        for col in ['author', 'title', 'supervisor']:
+            data[col] = data[col].replace(r'[\t\n"]', '', regex=True)
         return data
 
     def to_excel(self, data: pd.DataFrame, save_to: str = 'elte-ttk-thesis-list.xlsx'):
