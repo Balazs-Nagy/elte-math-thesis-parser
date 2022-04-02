@@ -74,5 +74,23 @@ class ElteMathThesisParser:
         for program in self.programs.keys():
             df = self.parse_one(program)
             dfs.append(df)
+            print(f'Finished parsing for {program}.')
         data = pd.concat(dfs)
         return data
+
+    def to_excel(self, data: pd.DataFrame, save_to: str = 'elte-ttk-thesis-list.xlsx'):
+        # available programs as dataframe
+        programs = pd.DataFrame.from_dict(self.programs,
+                                          orient='index',
+                                          columns=['link']).reset_index().rename({'index': 'program'}, axis=1)
+        results = {'programs': programs,
+                   'data': data}
+
+        # save programs and thesis data to Excel
+        with pd.ExcelWriter(save_to, engine='xlsxwriter') as writer:
+            for sheet_name, df in results.items():
+                # write data to sheet
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                # apply auto-filter
+                writer.sheets[sheet_name].autofilter(0, 0, df.shape[0], df.shape[1] - 1)
+        print(f'Saved results to {save_to}.')
