@@ -1,6 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import re
+import time
+import os
 
 
 class ElteMathThesisParser:
@@ -10,6 +13,9 @@ class ElteMathThesisParser:
     def __init__(self):
         # link to homepage
         self.home = 'https://www.math.elte.hu/kepzesek/diplomamunkak/'
+        # root of theses (pdf files)
+        self.root_url = 'https://web.cs.elte.hu/blobs/diplomamunkak/'
+        self.output_folder = 'data'
 
     @property
     def programs(self) -> dict:
@@ -81,7 +87,7 @@ class ElteMathThesisParser:
         data = pd.concat(dfs)
         # clean unwanted characters
         for col in ['author', 'title', 'supervisor']:
-            data[col] = data[col].replace(r'[\t\n"]', '', regex=True)
+            data[col] = data[col].replace(r'[\t\n"?!/=*:]', '', regex=True)
         return data
 
     def to_excel(self, data: pd.DataFrame, save_to: str = 'elte-ttk-thesis-list.xlsx'):
@@ -93,10 +99,44 @@ class ElteMathThesisParser:
                    'data': data}
 
         # save programs and thesis data to Excel
-        with pd.ExcelWriter(save_to, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(f'{self.output_folder}/{save_to}', engine='xlsxwriter') as writer:
             for sheet_name, df in results.items():
                 # write data to sheet
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
                 # apply auto-filter
                 writer.sheets[sheet_name].autofilter(0, 0, df.shape[0], df.shape[1] - 1)
         print(f'Saved results to {save_to}.')
+
+    def download(self, data: pd.DataFrame, download_delay: int = 5):
+        # create filepath - web url links
+        links = {}
+        for index, row in data.iterrows():
+            # extract url, author and thesis title
+            url, author, title = row['url'], row['author'], row['title']
+            # strip tab characters if any
+            title = re.sub(r'[\t\n"]+', '', title)
+            # from the link we will use the program and year features
+            program, year, pdf = url.replace(self.root_url, '').split('/')
+            filepath = f'{self.output_folder}/{program}/{year} - {author} - {title}.pdf'
+            # store filepath - web url pairs
+            links.update({filepath: url})
+
+        # download theses to disk
+        n = len(links)
+        i = 0
+        for filepath, url in links.items():
+            i += 1
+            if not os.path.exists(filepath):
+                # delay request (delay - integer in seconds)
+                time.sleep(download_delay)
+                # send request
+                response = requests.get(url)
+                # create folder if not exists
+                folder = '/'.join(filepath.split('/')[:-1])
+                os.makedirs(folder, exist_ok=True)
+                # write file to disk
+                with open(filepath, 'wb') as pdf:
+                    pdf.write(response.content)
+                print(f'Finished dowloading {i}/{n}.')
+            else:
+                print(f'Skipping entry {i} as it is already downloaded.')
