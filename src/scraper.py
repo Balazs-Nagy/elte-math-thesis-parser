@@ -1,9 +1,13 @@
+from typing import Optional
+
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
 import time
 import os
+
+from pandas import DataFrame
 
 
 class ElteMathThesisParser:
@@ -25,7 +29,7 @@ class ElteMathThesisParser:
         programs = {tag.text: tag.a.get('href') for tag in soup.find('div', class_='dobozban').find_all('p')}
         return programs
 
-    def parse_one(self, program) -> pd.DataFrame:
+    def parse_one(self, program: str) -> Optional[DataFrame]:
         """ Parse thesis entries found on the webpage of a single program."""
         try:
             url = self.programs[program]
@@ -137,6 +141,6 @@ class ElteMathThesisParser:
                 # write file to disk
                 with open(filepath, 'wb') as pdf:
                     pdf.write(response.content)
-                print(f'Finished dowloading {i}/{n}.')
+                print(f'Finished downloading {i}/{n}.')
             else:
                 print(f'Skipping entry {i} as it is already downloaded.')

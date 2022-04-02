@@ -8,7 +8,7 @@ def run():
     print(elte_ttk_math.home)
     # parse thesis info to single dataframe for the given programs
     data = elte_ttk_math.parse_all(programs=None)
-    # save parsed info to excel
+    # save parsed info to excel - overwrites existing file!
     elte_ttk_math.to_excel(data=data, save_to='elte-ttk-thesis-list.xlsx')
     # download theses corresponding to selected programs
     programs = ['BSc Matematikus diplomamunkák', 'MSc Biztosítási és pénzügyi matematikus']
